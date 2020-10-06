@@ -40,7 +40,7 @@ signal s_i_nzc: std_logic_vector(2 downto 0);	-- шина флагов
 signal s_sub: std_logic := '0';	
 signal s_logic: std_logic := '0';
 signal s_mov_cpse: std_logic := '0';
-signal s_use_old_zero: std_logic := '0';
+
 
 
 begin
@@ -68,11 +68,9 @@ o_negative  <= s_i_nzc(2) when s_mov_cpse = '1'
 -- установка флага нулевого результата 
 -- для ADD, ADC, SUB, SBC, CP, AND, EOR, OR
 -- игнорируется при выполнении MOV
--- SBC, CPC: значение флага остаётся неизменным если предыдущий результат 0, иначе очищается
 o_zero      <= s_i_nzc(1) when s_mov_cpse = '1'
 				else not (s_result(0) or s_result(1) or s_result(2) or s_result(3)
-				     or s_result(4) or s_result(5) or s_result(6) or s_result(7))
-					and (not s_use_old_zero or s_i_nzc(1));
+				     or s_result(4) or s_result(5) or s_result(6) or s_result(7));
 
 
 -- основной блок синхронной логики 
@@ -83,7 +81,7 @@ begin
 	
 		if i_reset = '1' then
 			s_sub <= '0';
-			s_use_old_zero <= '0';
+			
 			s_i_nzc <= (others => '0');
 
 		else		
@@ -99,7 +97,7 @@ begin
 					s_sub <= '0';
 					s_logic <= '0';
 					s_mov_cpse <= '0';
-					s_use_old_zero <= '0';
+					
 					if i_operation(2) = '1' and i_carry = '1' then
 						s_result <= i_op1 + i_op2 + 1; -- ADDC C=1
 					else
@@ -116,7 +114,7 @@ begin
 					else
 						s_mov_cpse <= '0';
 					end if;
-					s_use_old_zero <= not i_operation(2);
+					
 					if i_operation(2) = '0' and i_carry = '1' then
 						s_result <= i_op1 - i_op2 - 1;
 					else
@@ -129,35 +127,35 @@ begin
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '0';
-					s_use_old_zero <= '0';
+					
 					s_result <= i_op1 and i_op2;
 
 				when "1001" => -- EOR
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '0';
-					s_use_old_zero <= '0';
+				
 					s_result <= i_op1 xor i_op2;
 
 				when "1010" => -- OR
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '0';
-					s_use_old_zero <= '0';
+					
 					s_result <= i_op1 or i_op2;
 					
 				when "1011" => -- MOV
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '1';
-					s_use_old_zero <= '0';
+					
 					s_result <= i_op2;
 					
 				when others =>
 					s_sub <= '0';
 					s_logic <= '0';
 					s_mov_cpse <= '1';
-					s_use_old_zero <= '0';
+					
 					s_result <= (others => '0');
 			end case;
 		end if;
