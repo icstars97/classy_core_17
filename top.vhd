@@ -16,7 +16,7 @@ port (
 );
 end toplevel;
 
-architecture Behavioral of AVR_CPU is
+architecture Behavioral of toplevel is
 
 component CtrlFetch is
 port ( 
@@ -106,16 +106,12 @@ port (
 	i_op2:			in unsigned(7 downto 0);
 	o_result:		out unsigned(7 downto 0);
 	--
-	i_halfcarry:	in std_logic;
-	i_sign:			in std_logic;
-	i_overflow:		in std_logic;
+
 	i_negative:		in std_logic;
 	i_zero:			in std_logic;
 	i_carry:			in std_logic;
 	--
-	o_halfcarry:	out std_logic;	-- unsigned
-	o_sign:			out std_logic;	-- 2's complement
-	o_overflow:		out std_logic; -- 2's complement
+
 	o_negative:		out std_logic; -- 2's complement
 	o_zero:			out std_logic; -- arith+logic
 	o_carry:			out std_logic  -- unsigned
@@ -287,16 +283,16 @@ port map (
 	i_op2 => s_alu_op2, 
 	o_result => s_alu_result, 
 	--
-	i_halfcarry => '0', -- todo
-	i_sign => '0', -- todo
-	i_overflow => '0', -- todo
+
+
+
 	i_negative => '0', -- todo
 	i_zero => '0', -- todo
 	i_carry => '0', -- todo
 	--
-	o_halfcarry => s_alu_sreg(5), 
-	o_sign => s_alu_sreg(4), 
-	o_overflow => s_alu_sreg(3), 
+
+
+
 	o_negative => s_alu_sreg(2),
 	o_zero => s_alu_sreg(1), 
 	o_carry => s_alu_sreg(0)

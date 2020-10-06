@@ -34,7 +34,7 @@ end Alu;
 architecture Behavioral of Alu is
 					-- ВНУТРЕННИЕ СИГНАЛЫ БЛОКА АЛУ
 signal s_result: unsigned(8 downto 0) := (others => '0'); -- результат
-
+signal s_op1, s_op2 : unsigned(8 downto 0);
 signal s_i_nzc: std_logic_vector(2 downto 0);	-- шина флагов
 
 signal s_sub: std_logic := '0';	
@@ -45,8 +45,11 @@ signal s_mov_cpse: std_logic := '0';
 
 begin
 
+s_op1 <= '0' & i_op1;
+s_op2 <= '0' & i_op2;
+
 -- выход результат операции 
-o_result <= s_result;
+o_result <= s_result(7 downto 0);
 
 
 -- установка флага переноса для ADD,ADC (s_sub=0)
@@ -99,9 +102,9 @@ begin
 					s_mov_cpse <= '0';
 					
 					if i_operation(2) = '1' and i_carry = '1' then
-						s_result <= i_op1 + i_op2 + 1; -- ADDC C=1
+						s_result <= s_op1 + s_op2 + 1; -- ADDC C=1
 					else
-						s_result <= i_op1 + i_op2; -- ADD, ADDC C=0
+						s_result <= s_op1 + s_op2; -- ADD, ADDC C=0
 					end if;
 
 				when "0110" | "0010" | "0101" | "0001" | "0100" => -- SUB | SBC | CP | CPC | CPSE
@@ -116,9 +119,9 @@ begin
 					end if;
 					
 					if i_operation(2) = '0' and i_carry = '1' then
-						s_result <= i_op1 - i_op2 - 1;
+						s_result <= s_op1 - s_op2 - 1;
 					else
-						s_result <= i_op1 - i_op2;
+						s_result <= s_op1 - s_op2;
 					end if;
 					
 				-- блок логических операций 
@@ -128,28 +131,28 @@ begin
 					s_logic <= '1';
 					s_mov_cpse <= '0';
 					
-					s_result <= i_op1 and i_op2;
+					s_result <= s_op1 and s_op2;
 
 				when "1001" => -- EOR
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '0';
 				
-					s_result <= i_op1 xor i_op2;
+					s_result <= s_op1 xor s_op2;
 
 				when "1010" => -- OR
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '0';
 					
-					s_result <= i_op1 or i_op2;
+					s_result <= s_op1 or s_op2;
 					
 				when "1011" => -- MOV
 					s_sub <= '0';
 					s_logic <= '1';
 					s_mov_cpse <= '1';
 					
-					s_result <= i_op2;
+					s_result <= s_op2;
 					
 				when others =>
 					s_sub <= '0';
