@@ -2,7 +2,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity top is
+entity toplevel is
 port (
 	i_clk: 			in std_logic;
 	i_reset_ext: 	in std_logic;
@@ -14,9 +14,9 @@ port (
 	o_ALU_result:	out unsigned(7 downto 0);
 	o_ALU_sreg:		out std_logic_vector(5 downto 0)
 );
-end top;
+end toplevel;
 
-architecture Behavioral of top is
+architecture Behavioral of AVR_CPU is
 
 component CtrlFetch is
 port ( 
@@ -65,7 +65,12 @@ port (
 	o_writeReg:		out std_logic;
 	o_ldi:			out std_logic;
 	-- data path
-	o_K:				out unsigned(15 downto 0)
+	o_K:				out unsigned(15 downto 0);
+	--stack handling
+	o_write_stack:	out std_logic;
+	o_read_stack:	out std_logic;	
+	o_push: 			out std_logic;
+	o_pop:				out std_logic
 );
 end component;
 
@@ -116,6 +121,27 @@ port (
 	o_carry:			out std_logic  -- unsigned
 );
 end component;
+
+component Stack is
+port (
+	i_clk:			in std_logic;
+
+	i_read: 			in std_logic;
+	i_data: 			in unsigned(7 downto 0);
+	
+	o_data: 			out unsigned(7 downto 0);
+	i_write:			in std_logic
+	
+);
+end component;
+
+-- connections between Stack and CtrlUnit
+signal s_st_data_in: unsigned(7 downto 0);
+signal s_st_data_out: unsigned(7 downto 0);
+signal s_st_write: std_logic;
+signal s_st_read: std_logic;
+signal s_pop: std_logic;
+signal s_push: std_logic;
 
 -- connections between PM and CtrlFetch
 signal s_pm_addr: unsigned(15 downto 0);
@@ -199,7 +225,12 @@ port map (
 	o_loadIR => s_loadIR, 
 	o_writeReg => s_reg_write, 
 	o_ldi => s_ldi, 
-	o_K => s_K
+	o_K => s_K,
+	--stack handling
+	o_write_stack => s_st_write,
+	o_read_stack => s_st_read,
+	o_push => s_push,		
+	o_pop => s_pop
 );
 
 -- Responsible to provide general-purpose registers R0..R31.
@@ -221,6 +252,15 @@ port map (
 	o_z => s_z
 );
 
+Stack_0: component Stack
+port map ( 
+	i_clk => i_clk, 
+	i_read => s_st_read,
+	i_data => s_st_data_in,
+	o_data => s_st_data_out,
+	i_write => s_st_write
+);
+
 s_reg_addr_r1 <= s_IR(8 downto 4); -- Rd
 s_reg_addr_r2 <= s_IR(9) & s_IR(3 downto 0); -- Rr
 
@@ -229,9 +269,12 @@ s_reg_addr_w(4) <= '1' when s_ldi = '1' else s_IR(8);
 s_reg_addr_w(3 downto 0) <= s_IR(7 downto 4);  -- Rd
 
 -- LDI stores a constant from IR into the register
-s_reg_data_w <= s_IR(11 downto 8) & s_IR(3 downto 0) when s_ldi = '1'
-	else s_alu_result;
+s_reg_data_w <= s_IR(11 downto 8) & s_IR(3 downto 0) when s_ldi = '1' else
+					 s_st_data_out when s_pop = '1'
+					else s_alu_result;
 
+s_st_data_in <= s_reg_data_r1;	-- value to stack can be added only from R		
+					
 -- Responsible for arithmetic and logic operations on 2 operands.
 Alu_0: component Alu
 port map ( 
@@ -265,5 +308,6 @@ s_alu_op2 <= s_reg_data_r2;
 
 o_ALU_result <= s_alu_result;
 o_ALU_sreg <= s_alu_sreg;
+
 
 end Behavioral;
