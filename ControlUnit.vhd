@@ -16,6 +16,8 @@ port (
 	o_modePCZ:		out std_logic;
 	o_loadPC:		out std_logic;
 	o_loadIR:		out std_logic;
+	o_writeReg:		out std_logic;
+	o_ldi:			out std_logic;
 	-- data path
 	o_K:				out unsigned(15 downto 0)
 );
@@ -29,11 +31,18 @@ type ControlUnitState is (
 	CUS_FETCH_1, 		-- fetch the next instruction into IR
 	CUS_FETCH_2, 		--  (wait for memory)
 	CUS_DECODE, 		-- decode the instruction in IR
+	-- 00..
+	CUS_EXEC_ALU_1, 	-- execute ALU instruction (ADD, MOV, ...)
+	CUS_EXEC_ALU_2_WRITE, 	--  write result to register (ADD, AND, SUB, MOV, ...)
+	CUS_EXEC_ALU_2_NOWRITE, --  don't write result to register (CP, CPC, CPSE)
+	-- 10..
 	CUS_EXEC_IJMP, 	-- execute IJMP instruction
+	-- 11..
 	CUS_EXEC_RJMP, 	-- execute RJMP instruction
 	CUS_EXEC_SBRS_1, 	-- execute SBRS instruction
 	CUS_EXEC_SBRS_2,  --  (handle bit test result)
-	CUS_EXEC_SBRS_3	--  (skip next instruction)
+	CUS_EXEC_SBRS_3,	--  (skip next instruction)
+	CUS_EXEC_LDI
 );
 
 signal s_state: ControlUnitState;
@@ -57,13 +66,28 @@ o_modePCZ <= '0'; -- unused at the moment because we don't fetch data from PM
 --'0' when (s_state = CUS_FETCH or s_state = CUS_RESET_0 or s_state = CUS_RESET_1)
 --			else '1';
 			
-o_loadPC <= '1' when (s_state = CUS_FETCH_1 or s_state = CUS_EXEC_IJMP or s_state = CUS_EXEC_RJMP or s_state = CUS_EXEC_SBRS_3)
-			else '0' when (s_state = CUS_DECODE or s_state = CUS_EXEC_SBRS_1 or s_state = CUS_EXEC_SBRS_2)
+o_loadPC <= '1' when (
+				s_state = CUS_FETCH_1 
+				or s_state = CUS_EXEC_IJMP 
+				or s_state = CUS_EXEC_RJMP 
+				or s_state = CUS_EXEC_SBRS_3)
+			else '0' when (
+				s_state = CUS_DECODE 
+				or s_state = CUS_EXEC_SBRS_1 
+				or s_state = CUS_EXEC_SBRS_2)
 			else 'X';
 
 o_loadIR <= '1' when s_state = CUS_FETCH_2
 			else '0';
+
+o_writeReg <= '1' when (
+				s_state = CUS_EXEC_ALU_2_WRITE
+				or s_state = CUS_EXEC_LDI)
+			else '0';
 			
+o_ldi <= '1' when s_state = CUS_EXEC_LDI 
+			else '0';
+
 -- data path
 
 o_K <= unsigned(resize(signed(i_IR(11 downto 0)), 16)) when s_state = CUS_EXEC_RJMP
@@ -87,17 +111,43 @@ begin
 					s_state <= CUS_DECODE;
 
 				when CUS_DECODE =>
-					case i_IR(15 downto 12) is
-						when "1001" =>
-							s_state <= CUS_EXEC_IJMP;
-						when "1100" => 
-							s_state <= CUS_EXEC_RJMP;
-						when "1111" =>
-							s_state <= CUS_EXEC_SBRS_1;
+					case i_IR(15 downto 14) is
+						when "00" =>
+							s_state <= CUS_EXEC_ALU_1;
+						when "10" =>
+							case i_IR(13 downto 12) is
+								when "01" =>
+									s_state <= CUS_EXEC_IJMP;
+								when others =>
+									s_state <= CUS_FETCH_1; -- skip unknown instructions for now
+							end case;
+						when "11" => 
+							case i_IR(13 downto 12) is
+								when "00" =>
+									s_state <= CUS_EXEC_RJMP;
+								when "11" =>
+									s_state <= CUS_EXEC_SBRS_1;
+								when "10" =>
+									s_state <= CUS_EXEC_LDI;
+								when others =>
+									s_state <= CUS_FETCH_1; -- skip unknown instructions for now
+							end case;
 						when others =>
 							s_state <= CUS_FETCH_1; -- skip unknown instructions for now
 					end case;
-							
+				
+				when CUS_EXEC_ALU_1 =>
+					case i_IR(13 downto 10) is
+						when "0101" | "0001" | "0100" => -- CP, CPC, CPSE
+							s_state <= CUS_EXEC_ALU_2_NOWRITE;
+						when others => -- ADD, AND, SUB, MOV, ...
+							s_state <= CUS_EXEC_ALU_2_WRITE;
+					end case;
+				when CUS_EXEC_ALU_2_WRITE =>
+					s_state <= CUS_FETCH_1;
+				when CUS_EXEC_ALU_2_NOWRITE =>
+					s_state <= CUS_FETCH_1;
+				
 				when CUS_EXEC_IJMP =>
 					s_state <= CUS_FETCH_1;
 
@@ -113,7 +163,10 @@ begin
 						s_state <= CUS_EXEC_SBRS_3;
 					end if;
 				when CUS_EXEC_SBRS_3 =>
-						s_state <= CUS_FETCH_1;
+					s_state <= CUS_FETCH_1;
+						
+				when CUS_EXEC_LDI => 
+					s_state <= CUS_FETCH_1;
 				
 				when others =>
 					s_state <= CUS_RESET;
