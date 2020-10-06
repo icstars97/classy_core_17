@@ -17,14 +17,14 @@ port ( 	-- ВХОДЫ И ВЫХОДЫ БЛОКА АЛУ
 	o_result:		out unsigned(7 downto 0);	-- результат операции
 	--
 	
-	i_sign:			in std_logic;	--	вход флага знака
-	i_overflow:		in std_logic;	-- вход флага переполнения
+
+
 	i_negative:		in std_logic;	-- вход флага отрицательного значения
 	i_zero:			in std_logic;	-- вход флага нулевого значнения
 	i_carry:			in std_logic;	-- вход флага переноса
-	--
+
 	
-	o_sign:			out std_logic;	-- выход флага знака
+
 	o_negative:		out std_logic; -- выход флага отрицательного значения
 	o_zero:			out std_logic; -- выхода флага нулевого значения
 	o_carry:			out std_logic  -- выход флага переноса
@@ -35,7 +35,7 @@ architecture Behavioral of Alu is
 					-- ВНУТРЕННИЕ СИГНАЛЫ БЛОКА АЛУ
 signal s_result: unsigned(8 downto 0) := (others => '0'); -- результат
 
-signal s_i_snzc: std_logic_vector(3 downto 0);	-- шина флагов
+signal s_i_nzc: std_logic_vector(2 downto 0);	-- шина флагов
 
 signal s_sub: std_logic := '0';	
 signal s_logic: std_logic := '0';
@@ -52,20 +52,16 @@ o_result <= s_result;
 -- установка флага переноса для ADD,ADC (s_sub=0)
 -- или для SUB,SBC,CP,CPC (s_sub=1)
 -- игнорируется при выполнении AND, EOR, OR, MOV, CPSE
-o_carry     <= s_i_snzc(0) when (s_logic = '1' or s_mov_cpse = '1')
+o_carry     <= s_i_nzc(0) when (s_logic = '1' or s_mov_cpse = '1')
 				else s_result(8);
 
--- ADD, ADC, AND, EOR, OR, SUB
--- ignore for MOV
-o_sign      <= s_i_snzc(3) when s_mov_cpse = '1'
-				else s_result(7) xor s_overflow;
 
 
 
 -- установка флага отрицательного результата
 -- для ADD, ADC, SUB, AND, EOR, OR
 -- игнорируется при выполнении MOV
-o_negative  <= s_i_snzc(2) when s_mov_cpse = '1'
+o_negative  <= s_i_nzc(2) when s_mov_cpse = '1'
 				else s_result(7);
 
 
@@ -73,10 +69,10 @@ o_negative  <= s_i_snzc(2) when s_mov_cpse = '1'
 -- для ADD, ADC, SUB, SBC, CP, AND, EOR, OR
 -- игнорируется при выполнении MOV
 -- SBC, CPC: значение флага остаётся неизменным если предыдущий результат 0, иначе очищается
-o_zero      <= s_i_snzc(1) when s_mov_cpse = '1'
+o_zero      <= s_i_nzc(1) when s_mov_cpse = '1'
 				else not (s_result(0) or s_result(1) or s_result(2) or s_result(3)
 				     or s_result(4) or s_result(5) or s_result(6) or s_result(7))
-					and (not s_use_old_zero or s_i_snzc(1));
+					and (not s_use_old_zero or s_i_nzc(1));
 
 
 -- основной блок синхронной логики 
@@ -88,12 +84,12 @@ begin
 		if i_reset = '1' then
 			s_sub <= '0';
 			s_use_old_zero <= '0';
-			s_i_snzc <= (others => '0');
+			s_i_nzc <= (others => '0');
 
 		else		
 
 			
-			s_i_snzc <= i_sign& i_negative & i_zero & i_carry;
+			s_i_nzc <= i_negative & i_zero & i_carry;
 			
 			case i_operation is
 				
