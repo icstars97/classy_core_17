@@ -107,9 +107,8 @@ begin
 						s_result <= s_op1 + s_op2; -- ADD, ADDC C=0
 					end if;
 
-				when "0110" | "0010" | "0101" | "0001" | "0100" => -- SUB | SBC | CP | CPC | CPSE
-					-- * for CP and CPC, ignore the result
-					-- * for CPSE, ignore everything, but skip next instruction if Z=1
+				when "0110" | "0010" | "0101" | "0001" | "0100" => 
+					-- SUB | SBC | CP | CPC | CPSE
 					s_sub <= '1';
 					s_logic <= '0';
 					if i_operation = "0100" then
