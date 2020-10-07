@@ -84,7 +84,9 @@ begin
 	
 		if i_reset = '1' then
 			s_sub <= '0';
-			
+			s_logic <= '0';
+			s_mov_cpse <= '0';
+			s_result <= (others => '0');
 			s_i_nzc <= (others => '0');
 
 		else		
@@ -96,7 +98,8 @@ begin
 				
 				-- блок арифметических операций 
 				
-				when "0011" | "0111" => -- ADD | ADDC
+				when "0011" | "0111" => 
+					--  ADD  |  ADDC
 					s_sub <= '0';
 					s_logic <= '0';
 					s_mov_cpse <= '0';
@@ -108,7 +111,7 @@ begin
 					end if;
 
 				when "0110" | "0010" | "0101" | "0001" | "0100" => 
-					-- SUB | SBC | CP | CPC | CPSE
+					--  SUB  |  SBC   |   CP   |  CPC   |  CPSE
 					s_sub <= '1';
 					s_logic <= '0';
 					if i_operation = "0100" then
