@@ -48,10 +48,6 @@ begin
 				o_data_r1 <= R(to_integer(i_addr_r1)); 
 				o_data_r2 <= R(to_integer(i_addr_r2));
 				
-				
-				R(0) <= (others => '0');
-				...
-				R(31) <= (others => '0');
 		
 		--запись данных	
 			else 
