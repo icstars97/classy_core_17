@@ -3,15 +3,15 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 
---Managing ALU
+
 entity ControlUnit is
 port ( 
 	i_clk:			in std_logic;
 	i_reset:			in std_logic;
-	-- FSM inputs
+	-- входные сигналы автомата
 	i_IR:				in unsigned(15 downto 0);
 	i_ALU_Z:			in std_logic;
-	-- control path outputs (will connect to CtrlFetch block)
+	-- сигналы управления 
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
 	o_modeAddZA:	out std_logic_vector(1 downto 0);
@@ -20,9 +20,9 @@ port (
 	o_loadIR:		out std_logic;
 	o_writeReg:		out std_logic;
 	o_ldi:			out std_logic;
-	-- data path
+	-- данные
 	o_K:				out unsigned(15 downto 0);
-	--stack handling
+	-- работа со стеком
 	o_write_stack:	out std_logic;
 	o_read_stack:	out std_logic;
 	o_push: 			out std_logic;
@@ -31,24 +31,24 @@ port (
 end ControlUnit;
 
 architecture Behavioral of ControlUnit is
-
+	
 type PROGMEM is array(7 downto 0) of unsigned(15 downto 0);
 type ControlUnitState is (
-	CUS_RESET, 			-- initial state, reset all registers
-	CUS_FETCH_1, 		-- fetch the next instruction into IR
-	CUS_FETCH_2, 		--  (wait for memory)
-	CUS_DECODE, 		-- decode the instruction in IR
-	-- 00..
-	CUS_EXEC_ALU_1, 	-- execute ALU instruction (ADD, MOV, ...)
-	CUS_EXEC_ALU_2_WRITE, 	--  write result to register (ADD, AND, SUB, MOV, ...)
-	CUS_EXEC_ALU_2_NOWRITE, --  don't write result to register (CP, CPC, CPSE)
-	-- 10..
-	CUS_EXEC_IJMP, 	-- execute IJMP instruction
-	-- 11..
-	CUS_EXEC_RJMP, 	-- execute RJMP instruction
-	CUS_EXEC_SBRS_1, 	-- execute SBRS instruction
-	CUS_EXEC_SBRS_2,  --  (handle bit test result)
-	CUS_EXEC_SBRS_3,	--  (skip next instruction)
+	CUS_RESET, 							-- начальное состояние, сброс всех регистров
+	CUS_FETCH_1, 						-- выборка инструкции в регистр инструкций
+	CUS_FETCH_2, 						-- ожидание памяти
+	CUS_DECODE, 						-- декодирование инструкции
+											-- 00XX
+	CUS_EXEC_ALU_1, 					-- АЛУ выполняет инструкцию (ADD, MOV, ...)
+	CUS_EXEC_ALU_2_WRITE, 			--  результат сохраняется (ADD, AND, SUB, MOV, ...)
+	CUS_EXEC_ALU_2_NOWRITE, 		--  результат не сохраняется (CP, CPC, CPSE)
+											-- 10XX
+	CUS_EXEC_IJMP, 					-- выполнить IJMP
+											-- 11XX
+	CUS_EXEC_RJMP, 					-- выполнить RJMP 
+	CUS_EXEC_SBRS_1, 					-- выполнить SBRS
+	CUS_EXEC_SBRS_2,  				--  (handle bit test result)
+	CUS_EXEC_SBRS_3,					-- пропуск следующей инструкции
 	CUS_EXEC_LDI,
 	CUS_EXEC_POP,
 	CUS_EXEC_PUSH
@@ -58,7 +58,7 @@ signal s_state: ControlUnitState;
 
 begin
 
--- combinational logic
+-- комбинационная логика
 
 o_reset <= '1' when s_state = CUS_RESET
 			else '0';
@@ -71,7 +71,7 @@ o_modeAddZA <= "00" when (s_state = CUS_FETCH_1 or s_state = CUS_EXEC_RJMP or s_
 			else "10" when s_state = CUS_EXEC_IJMP
 			else "XX";
 			
-o_modePCZ <= '0'; -- unused at the moment because we don't fetch data from PM
+o_modePCZ <= '0'; -- не используется, выборка данных из памяти не реализована
 --'0' when (s_state = CUS_FETCH or s_state = CUS_RESET_0 or s_state = CUS_RESET_1)
 --			else '1';
 			
@@ -98,12 +98,12 @@ o_writeReg <= '1' when (
 o_ldi <= '1' when s_state = CUS_EXEC_LDI 
 			else '0';
 
--- data path
+-- выход данных
 
 o_K <= unsigned(resize(signed(i_IR(11 downto 0)), 16)) when s_state = CUS_EXEC_RJMP
 			else "XXXXXXXXXXXXXXXX";
 
---stack handling	
+-- работа со стеком	
 	
 o_write_stack <= '1' when s_state = CUS_EXEC_PUSH
 		else '0';
@@ -116,7 +116,7 @@ o_push <= '1' when s_state = CUS_EXEC_PUSH
 		
 o_pop <= '1' when s_state = CUS_EXEC_POP
 		else '0';
--- synchronous logic
+-- последовательностная логика
 
 process (i_clk)
 begin
@@ -146,7 +146,7 @@ begin
 								when "01001" =>
 									s_state <= CUS_EXEC_PUSH;
 								when others =>
-									s_state <= CUS_FETCH_1; -- skip unknown instructions for now
+									s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
 							end case;
 						when "11" => 
 							case i_IR(13 downto 12) is
@@ -157,10 +157,10 @@ begin
 								when "10" =>
 									s_state <= CUS_EXEC_LDI;
 								when others =>
-									s_state <= CUS_FETCH_1; -- skip unknown instructions for now
+									s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
 							end case;
 						when others =>
-							s_state <= CUS_FETCH_1; -- skip unknown instructions for now
+							s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
 					end case;
 				
 				when CUS_EXEC_ALU_1 =>
@@ -184,9 +184,9 @@ begin
 				when CUS_EXEC_SBRS_1 =>
 					s_state <= CUS_EXEC_SBRS_2;
 				when CUS_EXEC_SBRS_2 =>
-					if i_ALU_Z = '1' then -- bit not set, don't skip
+					if i_ALU_Z = '1' then -- бит не выставлен, нет пропуска
 						s_state <= CUS_FETCH_1;
-					else -- bit set, skip instruction
+					else -- бит выставлен, пропуск
 						s_state <= CUS_EXEC_SBRS_3;
 					end if;
 				when CUS_EXEC_SBRS_3 =>
