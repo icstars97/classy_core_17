@@ -146,7 +146,7 @@ begin
 								when "01001" =>
 									s_state <= CUS_EXEC_PUSH;
 								when others =>
-									s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
+									s_state <= CUS_FETCH_1; 
 							end case;
 						when "11" => 
 							case i_IR(13 downto 12) is
@@ -157,10 +157,11 @@ begin
 								when "10" =>
 									s_state <= CUS_EXEC_LDI;
 								when others =>
-									s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
+									s_state <= CUS_FETCH_1; 
 							end case;
 						when others =>
-							s_state <= CUS_FETCH_1; -- пропуск неизвестной инструкции
+							-- неизвестная команда, пропуск
+							s_state <= CUS_FETCH_1; 
 					end case;
 				
 				when CUS_EXEC_ALU_1 =>
