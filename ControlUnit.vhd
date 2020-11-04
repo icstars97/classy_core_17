@@ -10,7 +10,6 @@ port (
 	i_reset:			in std_logic;
 	-- входные сигналы автомата
 	i_IR:				in unsigned(15 downto 0);
-	i_ALU_Z:			in std_logic;
 	-- сигналы управления 
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
@@ -25,14 +24,15 @@ port (
 	-- работа со стеком
 	o_write_stack:	out std_logic;
 	o_read_stack:	out std_logic;
-	o_push: 			out std_logic;
-	o_pop:				out std_logic
+	o_pop : 			out std_logic
+	
 );
 end ControlUnit;
 
 architecture Behavioral of ControlUnit is
 	
 type PROGMEM is array(7 downto 0) of unsigned(15 downto 0);
+
 type ControlUnitState is (
 	CUS_RESET, 							-- начальное состояние, сброс всех регистров
 	CUS_FETCH_1, 						-- выборка инструкции в регистр инструкций
@@ -42,13 +42,8 @@ type ControlUnitState is (
 	CUS_EXEC_ALU_1, 					-- АЛУ выполняет инструкцию (ADD, MOV, ...)
 	CUS_EXEC_ALU_2_WRITE, 			--  результат сохраняется (ADD, AND, SUB, MOV, ...)
 	CUS_EXEC_ALU_2_NOWRITE, 		--  результат не сохраняется (CP, CPC, CPSE)
-											-- 10XX
 	CUS_EXEC_IJMP, 					-- выполнить IJMP
-											-- 11XX
 	CUS_EXEC_RJMP, 					-- выполнить RJMP 
-	CUS_EXEC_SBRS_1, 					-- выполнить SBRS
-	CUS_EXEC_SBRS_2,  				--  (handle bit test result)
-	CUS_EXEC_SBRS_3,					-- пропуск следующей инструкции
 	CUS_EXEC_LDI,
 	CUS_EXEC_POP,
 	CUS_EXEC_PUSH
@@ -63,11 +58,13 @@ begin
 o_reset <= '1' when s_state = CUS_RESET
 			else '0';
 
-o_mode12K <= "00" when (s_state = CUS_FETCH_1 or s_state = CUS_EXEC_SBRS_3)
+o_mode12K <= "00" when s_state = CUS_FETCH_1
 			else "10" when s_state = CUS_EXEC_RJMP
 			else "XX";
 			
-o_modeAddZA <= "00" when (s_state = CUS_FETCH_1 or s_state = CUS_EXEC_RJMP or s_state = CUS_EXEC_SBRS_3)
+o_modeAddZA <= "00" when (
+			s_state = CUS_FETCH_1 
+			or s_state = CUS_EXEC_RJMP)
 			else "10" when s_state = CUS_EXEC_IJMP
 			else "XX";
 			
@@ -78,12 +75,8 @@ o_modePCZ <= '0'; -- не используется, выборка данных 
 o_loadPC <= '1' when (
 				s_state = CUS_FETCH_1 
 				or s_state = CUS_EXEC_IJMP 
-				or s_state = CUS_EXEC_RJMP 
-				or s_state = CUS_EXEC_SBRS_3)
-			else '0' when (
-				s_state = CUS_DECODE 
-				or s_state = CUS_EXEC_SBRS_1 
-				or s_state = CUS_EXEC_SBRS_2)
+				or s_state = CUS_EXEC_RJMP)
+			else '0' when s_state = CUS_DECODE 
 			else 'X';
 
 o_loadIR <= '1' when s_state = CUS_FETCH_2
@@ -100,7 +93,8 @@ o_ldi <= '1' when s_state = CUS_EXEC_LDI
 
 -- выход данных
 
-o_K <= unsigned(resize(signed(i_IR(11 downto 0)), 16)) when s_state = CUS_EXEC_RJMP
+o_K <= unsigned(resize(signed(i_IR(11 downto 0)), 16)) when 
+				s_state = CUS_EXEC_RJMP
 			else "XXXXXXXXXXXXXXXX";
 
 -- работа со стеком	
@@ -110,10 +104,7 @@ o_write_stack <= '1' when s_state = CUS_EXEC_PUSH
 
 o_read_stack <= '1' when s_state = CUS_EXEC_POP
 		else '0';
-		
-o_push <= '1' when s_state = CUS_EXEC_PUSH
-		else '0';
-		
+				
 o_pop <= '1' when s_state = CUS_EXEC_POP
 		else '0';
 -- последовательностная логика
@@ -130,6 +121,7 @@ begin
 					
 				when CUS_FETCH_1 =>
 					s_state <= CUS_FETCH_2;
+					
 				when CUS_FETCH_2 =>
 					s_state <= CUS_DECODE;
 
@@ -152,8 +144,6 @@ begin
 							case i_IR(13 downto 12) is
 								when "00" =>
 									s_state <= CUS_EXEC_RJMP;
-								when "11" =>
-									s_state <= CUS_EXEC_SBRS_1;
 								when "10" =>
 									s_state <= CUS_EXEC_LDI;
 								when others =>
@@ -171,8 +161,10 @@ begin
 						when others => -- ADD, AND, SUB, MOV, ...
 							s_state <= CUS_EXEC_ALU_2_WRITE;
 					end case;
+					
 				when CUS_EXEC_ALU_2_WRITE =>
 					s_state <= CUS_FETCH_1;
+					
 				when CUS_EXEC_ALU_2_NOWRITE =>
 					s_state <= CUS_FETCH_1;
 				
@@ -182,16 +174,7 @@ begin
 				when CUS_EXEC_RJMP =>
 					s_state <= CUS_FETCH_1;
 
-				when CUS_EXEC_SBRS_1 =>
-					s_state <= CUS_EXEC_SBRS_2;
-				when CUS_EXEC_SBRS_2 =>
-					if i_ALU_Z = '1' then -- бит не выставлен, нет пропуска
-						s_state <= CUS_FETCH_1;
-					else -- бит выставлен, пропуск
-						s_state <= CUS_EXEC_SBRS_3;
-					end if;
-				when CUS_EXEC_SBRS_3 =>
-					s_state <= CUS_FETCH_1;
+				
 						
 				when CUS_EXEC_LDI => 
 					s_state <= CUS_FETCH_1;

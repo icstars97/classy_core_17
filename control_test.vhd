@@ -19,7 +19,6 @@ port(
 	i_clk:			in std_logic;
 	i_reset:			in std_logic;
 	i_IR:				in unsigned(15 downto 0);
-	i_ALU_Z:			in std_logic;
 
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
@@ -34,7 +33,6 @@ port(
 
 	o_write_stack:	out std_logic;
 	o_read_stack:	out std_logic;
-	o_push: 			out std_logic;
 	o_pop:			out std_logic
 	
 );
@@ -59,7 +57,6 @@ begin
 		i_reset => i_reset,
 		
 		i_IR => i_IR,
-		i_ALU_Z => i_ALU_Z,
 		
 		o_reset => o_reset,
 		o_mode12K => o_mode12K,
@@ -73,10 +70,8 @@ begin
 		
 		o_write_stack => o_write_stack,
 		o_read_stack => o_read_stack,
-		o_push => o_push,
 		o_pop => o_pop
-		
-		
+			
 	);
 	
 	--тактирование
@@ -94,8 +89,14 @@ begin
 		i_reset <= '1';
 		wait for per_clk * 3;
 		i_reset <= '0';
-		i_IR <= x"0e2e";
-		
+		i_IR <= x"0e2e"; -- add r2,r30
+		wait for per_clk * 5;
+		assert (o_writeReg = '1') report "alu output signal error" severity error;
+		assert (o_writeReg /= '1') report "alu output signal ok" severity note;
+		i_IR <= x"c003"; -- rjmp .+6
+		wait for per_clk * 1;
+		i_IR <= x"e0e3"; -- ldi r30,3
+		wait for per_clk * 1;
 		wait;
 	end process;
 
