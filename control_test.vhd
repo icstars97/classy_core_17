@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
+--use ieee.std_logic_signed.all;
 
 
 
@@ -49,15 +50,60 @@ signal o_mode12K, o_modeAddZA : std_logic_vector(1 downto 0);
 
 constant per_clk : time := 20 ns;
 
+procedure test_alu_write(-- cp r7,r16
+	signal s_writereg, s_loadIR : in std_logic;
+	signal s_mode12K, s_modeAddZA : in std_logic_vector(1 downto 0);
+	signal s_ir : out unsigned(15 downto 0)) is 	
+begin
+	s_ir <= x"0e2e"; -- add r2,r30
+	wait for per_clk;
+	assert (s_mode12K = "00" and s_modeAddZA = "00") 
+	report "program counter signals error" severity error;
+	assert (s_mode12K /= "00" or s_modeAddZA /= "00") 
+	report "program counter signals ok" severity note; 
+	wait for per_clk;
+	assert s_loadIR = '1' report "command load signal error" severity error;
+	assert s_loadIR /= '1' report "command load signal ok" severity note;
+	wait for per_clk * 3;
+	assert (s_writereg = '1') report "alu output signal error" severity error;
+	assert (s_writereg /= '1') report "alu output signal ok" severity note;
+	s_ir <= x"0000";
+end procedure;
+
+procedure test_alu_nowrite(
+	signal s_writereg: in std_logic;
+	
+	signal s_ir : out unsigned(15 downto 0)) is 	
+begin
+	s_ir <= x"1670"; -- cp r7,r16
+	wait for per_clk * 5;
+	assert (s_writereg = '0') report "alu output signal error" severity error;
+	assert (s_writereg /= '0') report "alu output signal ok" severity note;
+	s_ir <= x"0000";
+end procedure;
+
+procedure test_ijmp(
+	signal s_loadPC : in std_logic;
+	signal s_modeAddZA : in std_logic_vector(1 downto 0);
+	signal s_ir : out unsigned(15 downto 0)) is 	
+begin
+	s_ir <= x"9409"; -- ijmp
+	report "ijmp test" severity note;
+	wait for per_clk * 4;
+	assert (s_loadPC = '1' and s_modeAddZA = "10")
+	report "pc output signal error" severity error;
+	assert (s_loadPC /= '1' or s_modeAddZA /= "10")
+	report "pc output signal ok" severity note;
+	s_ir <= x"0000";
+end procedure;
+
 begin
 
 	--инстанс компонента
 	uut : ControlUnit port map(
 		i_clk => i_clk,
 		i_reset => i_reset,
-		
 		i_IR => i_IR,
-		
 		o_reset => o_reset,
 		o_mode12K => o_mode12K,
 		o_modeAddZA => o_modeAddZA,
@@ -65,13 +111,10 @@ begin
 		o_loadPC => o_loadPC,
 		o_loadIR => o_loadIR,
 		o_writeReg => o_writeReg,
-		
 		o_ldi => o_ldi,
-		
 		o_write_stack => o_write_stack,
 		o_read_stack => o_read_stack,
-		o_pop => o_pop
-			
+		o_pop => o_pop		
 	);
 	
 	--тактирование
@@ -89,14 +132,12 @@ begin
 		i_reset <= '1';
 		wait for per_clk * 3;
 		i_reset <= '0';
-		i_IR <= x"0e2e"; -- add r2,r30
-		wait for per_clk * 5;
-		assert (o_writeReg = '1') report "alu output signal error" severity error;
-		assert (o_writeReg /= '1') report "alu output signal ok" severity note;
-		i_IR <= x"c003"; -- rjmp .+6
-		wait for per_clk * 1;
-		i_IR <= x"e0e3"; -- ldi r30,3
-		wait for per_clk * 1;
+		test_alu_write(o_writeReg, o_loadIR, o_mode12K, o_modeAddZA, i_IR);
+		test_alu_nowrite(o_writeReg, i_IR);
+		
+		test_ijmp(o_loadPC, o_modeAddZA, i_iR);
+		
+		
 		wait;
 	end process;
 
