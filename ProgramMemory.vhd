@@ -13,14 +13,20 @@ end ProgramMemory;
 
 architecture Behavioral of ProgramMemory is
 
-type PROGMEM is array(7 downto 0) of unsigned(15 downto 0);
+type PROGMEM is array(8 downto 0) of unsigned(15 downto 0);
 
 signal s_pm: PROGMEM := (
-x"0000", -- unused
+x"0000", -- nop
+x"0000", -- nop
 x"9409", -- ijmp
-x"cfff", -- rjmp .-2
-x"cfff", -- rjmp .-2
-x"0e2e", -- add r2,r30
+x"2de3", -- mov r30, r3
+x"0000", -- nop
+x"c001", -- rjmp .1
+--x"904f", -- pop r0
+x"93ef", -- push r30
+x"1010", -- cpse r30, r0
+--x"120e", -- cpse r30, r0
+--x"0e2e", -- add r2,r30
 x"e0e3"  -- ldi r30,3
 );
 

@@ -10,11 +10,11 @@ port (
 	i_reset:			in std_logic;
 	-- входные сигналы автомата
 	i_IR:				in unsigned(15 downto 0);
+	i_zero:			in std_logic;
 	-- сигналы управления 
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
 	o_modeAddZA:	out std_logic_vector(1 downto 0);
-	o_modePCZ:		out std_logic;
 	o_loadPC:		out std_logic;
 	o_loadIR:		out std_logic;
 	o_writeReg:		out std_logic;
@@ -47,7 +47,9 @@ type ControlUnitState is (
 	CUS_EXEC_RJMP, 					-- выполнить RJMP 
 	CUS_EXEC_LDI,
 	CUS_EXEC_POP,
-	CUS_EXEC_PUSH
+	CUS_EXEC_PUSH,
+	CUS_EXEC_CPSE,
+	CUS_SKIP
 );
 
 signal s_state: ControlUnitState;
@@ -60,7 +62,8 @@ begin
 o_reset <= '1' when s_state = CUS_RESET
 			else '0';
 
-o_mode12K <= "00" when s_state = CUS_FETCH_1
+o_mode12K <= "00" when (s_state = CUS_FETCH_1
+			or s_state =CUS_SKIP)
 			else "10" when s_state = CUS_EXEC_RJMP
 			else "XX";
 			
@@ -70,12 +73,11 @@ o_modeAddZA <= "00" when (
 			else "10" when s_state = CUS_EXEC_IJMP
 			else "XX";
 			
-o_modePCZ <= '0'; -- не используется, выборка данных из памяти не реализована
---'0' when (s_state = CUS_FETCH or s_state = CUS_RESET_0 or s_state = CUS_RESET_1)
---			else '1';
+
 			
 o_loadPC <= '1' when (
 				s_state = CUS_FETCH_1 
+				or s_state = CUS_SKIP
 				or s_state = CUS_EXEC_IJMP 
 				or s_state = CUS_EXEC_RJMP)
 			else '0' when s_state = CUS_DECODE 
@@ -122,7 +124,8 @@ begin
 			case s_state is
 				when CUS_RESET =>
 					s_state <= CUS_FETCH_1;
-					
+				when CUS_SKIP =>
+					s_state <= CUS_FETCH_1;
 				when CUS_FETCH_1 =>
 					s_state <= CUS_FETCH_2;
 					
@@ -160,8 +163,10 @@ begin
 				
 				when CUS_EXEC_ALU_1 =>
 					case i_IR(13 downto 10) is
-						when "0101" | "0001" | "0100" => -- CP, CPC, CPSE
+						when "0101" | "0001" => -- CP, CPC, 
 							s_state <= CUS_EXEC_ALU_2_NOWRITE;
+						when "0100" =>
+							s_state <= CUS_EXEC_CPSE;
 						when others => -- ADD, AND, SUB, MOV, ...
 							s_state <= CUS_EXEC_ALU_2_WRITE;
 					end case;
@@ -177,9 +182,12 @@ begin
 
 				when CUS_EXEC_RJMP =>
 					s_state <= CUS_FETCH_1;
-
-				
-						
+				when CUS_EXEC_CPSE=>
+					if (i_zero = '1') then
+						s_state <= CUS_SKIP;
+					else
+						s_state <= CUS_FETCH_1;
+					end if;		
 				when CUS_EXEC_LDI => 
 					s_state <= CUS_FETCH_1;
 				

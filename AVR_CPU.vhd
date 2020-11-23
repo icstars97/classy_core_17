@@ -2,21 +2,14 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
-entity toplevel is
+entity AVR_CPU is
 port (
 	i_clk: 			in std_logic;
-	i_reset_ext: 	in std_logic;
-	-- data path
-	i_A:				in unsigned(15 downto 0);
-	i_ALU_Z:			in std_logic;
-	o_PMDATA:		out unsigned(15 downto 0);
-	-- debug
-	o_ALU_result:	out unsigned(7 downto 0);
-	o_ALU_sreg:		out std_logic_vector(5 downto 0)
+	i_reset_ext: 	in std_logic
 );
-end toplevel;
+end AVR_CPU;
 
-architecture Behavioral of toplevel is
+architecture Behavioral of AVR_CPU is
 
 component CtrlFetch is
 port ( 
@@ -25,7 +18,6 @@ port (
 	-- control path
 	i_mode12K:		in std_logic_vector(1 downto 0);
 	i_modeAddZA:	in std_logic_vector(1 downto 0);
-	i_modePCZ:		in std_logic;
 	i_loadPC:		in std_logic;
 	i_loadIR:		in std_logic;
 	-- data path
@@ -33,7 +25,7 @@ port (
 	i_A:				in unsigned(15 downto 0);
 	i_Z:				in unsigned(15 downto 0);
 	o_IR:				out unsigned(15 downto 0);
-	o_PMDATA:		out unsigned(15 downto 0);
+
 	-- memory interface
 	o_PMADDR:		out unsigned(15 downto 0);
 	i_PMDATA:		in unsigned(15 downto 0)
@@ -54,12 +46,12 @@ port (
 	i_reset:			in std_logic;
 	-- FSM inputs
 	i_IR:				in unsigned(15 downto 0);
+	i_zero:			in std_logic;
 
 	-- control path outputs
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
 	o_modeAddZA:	out std_logic_vector(1 downto 0);
-	o_modePCZ:		out std_logic;
 	o_loadPC:		out std_logic;
 	o_loadIR:		out std_logic; 
 	o_writeReg:		out std_logic;
@@ -67,10 +59,10 @@ port (
 	-- data path
 	o_K:				out unsigned(15 downto 0);
 	--stack handling
+	o_SP: 			out unsigned(15 downto 0);
 	o_write_stack:	out std_logic;
 	o_read_stack:	out std_logic;	
-	o_SP: 			out unsigned(15 downto 0);
-	o_pop:				out std_logic
+	o_pop:			out std_logic
 );
 end component;
 
@@ -106,7 +98,7 @@ port (
 	i_op2:			in unsigned(7 downto 0);
 	o_result:		out unsigned(7 downto 0);
 	--
-
+	
 	i_negative:		in std_logic;
 	i_zero:			in std_logic;
 	i_carry:			in std_logic;
@@ -121,12 +113,10 @@ end component;
 component Stack is
 port (
 	i_clk:			in std_logic;
-	i_addr:			in unsigned(15 downto 0);
 	i_data: 			in unsigned(7 downto 0);
-	
-	o_data: 			out unsigned(7 downto 0);
-	i_write:			in std_logic
-	
+	i_addr:			in unsigned(15 downto 0);
+	i_write:			in std_logic;
+	o_data: 			out unsigned(7 downto 0)
 );
 end component;
 
@@ -134,10 +124,8 @@ end component;
 signal s_st_data_in: unsigned(7 downto 0);
 signal s_st_data_out: unsigned(7 downto 0);
 signal s_st_write: std_logic;
-signal s_st_read: std_logic;
 signal s_pop: std_logic;
-signal s_push: std_logic;
-signal s_sp : unsigned(15 downto 0);
+signal s_SP: unsigned(15 downto 0);
 
 -- connections between PM and CtrlFetch
 signal s_pm_addr: unsigned(15 downto 0);
@@ -154,28 +142,53 @@ signal s_ldi: std_logic;
 
 signal s_IR: unsigned(15 downto 0);
 signal s_K: unsigned(15 downto 0);
+signal s_A: unsigned(15 downto 0) := (others => '0');
 
 -- connections to the register file
 signal s_reg_write: std_logic := '0';
-signal s_reg_addr_r1: unsigned(4 downto 0) := (others => '0');
-signal s_reg_addr_r2: unsigned(4 downto 0) := (others => '0'); 
-signal s_reg_addr_w: unsigned(4 downto 0) := (others => '0');
-signal s_reg_data_r1: unsigned(7 downto 0) := (others => '0');
-signal s_reg_data_r2: unsigned(7 downto 0) := (others => '0');
-signal s_reg_data_w: unsigned(7 downto 0) := (others => '0');
+signal s_reg_addr_r1: unsigned(4 downto 0);
+signal s_reg_addr_r2: unsigned(4 downto 0); 
+signal s_reg_addr_w: unsigned(4 downto 0);
+signal s_reg_data_r1: unsigned(7 downto 0);
+signal s_reg_data_r2: unsigned(7 downto 0);
+signal s_reg_data_w: unsigned(7 downto 0);
 
-signal s_x: unsigned(15 downto 0) := (others => '0');
-signal s_y: unsigned(15 downto 0) := (others => '0');
-signal s_z: unsigned(15 downto 0) := (others => '0');
+signal s_x: unsigned(15 downto 0);
+signal s_y: unsigned(15 downto 0);
+signal s_z: unsigned(15 downto 0);
 
 -- connections to the ALU
-signal s_alu_operation: unsigned(3 downto 0) := (others => '0');
-signal s_alu_op1: unsigned(7 downto 0) := (others => '0');
-signal s_alu_op2: unsigned(7 downto 0) := (others => '0');
-signal s_alu_result: unsigned(7 downto 0) := (others => '0');
-signal s_alu_sreg: std_logic_vector(5 downto 0) := (others => '0');
+signal s_alu_operation: unsigned(3 downto 0);
+signal s_alu_op1: unsigned(7 downto 0);
+signal s_alu_op2: unsigned(7 downto 0);
+signal s_alu_result: unsigned(7 downto 0);
+signal s_alu_sreg: std_logic_vector(2 downto 0);
 
 begin
+
+ControlUnit_0: component ControlUnit
+port map (
+	i_clk => i_clk, 
+	i_reset => i_reset_ext, 
+	-- FSM inputs
+	i_IR => s_IR, 
+	i_zero => s_alu_sreg(1),
+	-- control path outputs
+	o_reset => s_reset, 
+	
+	o_mode12K => s_mode12K, 
+	o_modeAddZA => s_modeAddZA, 
+	o_loadPC => s_loadPC, 
+	o_loadIR => s_loadIR,
+	
+	o_writeReg => s_reg_write, 
+	o_ldi => s_ldi, 
+	o_K => s_K,
+	--stack handling
+	o_SP => s_SP,
+	o_write_stack => s_st_write,
+	o_pop => s_pop
+);
 
 CtrlFetch_0: component CtrlFetch
 port map (
@@ -184,15 +197,13 @@ port map (
 	-- control path
 	i_mode12K => s_mode12K, 
 	i_modeAddZA => s_modeAddZA, 
-	i_modePCZ => s_modePCZ, 
 	i_loadPC => s_loadPC, 
 	i_loadIR => s_loadIR, 
 	-- data path
 	i_K => s_K, 
-	i_A => i_A, 
+	i_A => s_A, 
 	i_Z => s_z, 
 	o_IR => s_IR, 
-	o_PMDATA => o_PMDATA,
 	-- memory interface
 	o_PMADDR => s_pm_addr, 
 	i_PMDATA => s_pm_data
@@ -205,31 +216,6 @@ port map (
 	o_data => s_pm_data
 );
 
-ControlUnit_0: component ControlUnit
-port map (
-	i_clk => i_clk, 
-	i_reset => i_reset_ext, 
-	-- FSM inputs
-	i_IR => s_IR, 
-	
-	-- control path outputs
-	o_reset => s_reset, 
-	o_mode12K => s_mode12K, 
-	o_modeAddZA => s_modeAddZA, 
-	o_modePCZ => s_modePCZ, 
-	o_loadPC => s_loadPC, 
-	o_loadIR => s_loadIR, 
-	o_writeReg => s_reg_write, 
-	o_ldi => s_ldi, 
-	o_K => s_K,
-	--stack handling
-	o_write_stack => s_st_write,
-	o_read_stack => s_st_read,
-	O_SP => s_sp,
-	o_pop => s_pop
-);
-
--- Responsible to provide general-purpose registers R0..R31.
 RegisterFile_0: component RegisterFile
 port map ( 
 	i_clk => i_clk, 
@@ -251,10 +237,10 @@ port map (
 Stack_0: component Stack
 port map ( 
 	i_clk => i_clk, 
-	i_addr => s_sp,
 	i_data => s_st_data_in,
 	o_data => s_st_data_out,
-	i_write => s_st_write
+	i_write => s_st_write,
+	i_addr => s_SP
 );
 
 s_reg_addr_r1 <= s_IR(8 downto 4); -- Rd
@@ -265,11 +251,17 @@ s_reg_addr_w(4) <= '1' when s_ldi = '1' else s_IR(8);
 s_reg_addr_w(3 downto 0) <= s_IR(7 downto 4);  -- Rd
 
 -- LDI stores a constant from IR into the register
-s_reg_data_w <= s_IR(11 downto 8) & s_IR(3 downto 0) when s_ldi = '1' else
-					 s_st_data_out when s_pop = '1'
+s_reg_data_w <= s_IR(11 downto 8) & s_IR(3 downto 0) when s_ldi = '1'
+					else s_st_data_out when s_pop = '1'
 					else s_alu_result;
 
-s_st_data_in <= s_reg_data_r1;	-- value to stack can be added only from R		
+-- value to the stack can be added only from Reg file	
+s_st_data_in <= s_reg_data_r1;	
+					
+					
+s_alu_operation <= s_IR(13 downto 10);
+s_alu_op1 <= s_reg_data_r1;
+s_alu_op2 <= s_reg_data_r2;
 					
 -- Responsible for arithmetic and logic operations on 2 operands.
 Alu_0: component Alu
@@ -284,26 +276,14 @@ port map (
 	o_result => s_alu_result, 
 	--
 
-
-
 	i_negative => '0', -- todo
 	i_zero => '0', -- todo
 	i_carry => '0', -- todo
 	--
 
-
-
 	o_negative => s_alu_sreg(2),
 	o_zero => s_alu_sreg(1), 
 	o_carry => s_alu_sreg(0)
 );
-
-s_alu_operation <= s_IR(13 downto 10);
-s_alu_op1 <= s_reg_data_r1;
-s_alu_op2 <= s_reg_data_r2;
-
-o_ALU_result <= s_alu_result;
-o_ALU_sreg <= s_alu_sreg;
-
-
 end Behavioral;
+

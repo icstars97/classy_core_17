@@ -1,8 +1,8 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
 
-use ieee.std_logic_signed.all;
+
 
 
 -- Spartan 3
@@ -21,7 +21,7 @@ port (
 	-- control path
 	i_mode12K:		in std_logic_vector(1 downto 0);
 	i_modeAddZA:	in std_logic_vector(1 downto 0);
-	i_modePCZ:		in std_logic;
+
 	i_loadPC:		in std_logic;
 	i_loadIR:		in std_logic;
 	-- data path
@@ -43,7 +43,7 @@ signal s_PC: unsigned(15 downto 0);
 signal s_IR: unsigned(15 downto 0);
 
 -- asynchronous internal signals
-signal s_adderInput1: signed(15 downto 0);
+signal s_adderInput1: unsigned(15 downto 0);
 signal s_adderOutput: unsigned(15 downto 0);
 signal s_pcInput: unsigned(15 downto 0);
 signal s_addr: unsigned(15 downto 0);
@@ -51,11 +51,10 @@ signal s_addr: unsigned(15 downto 0);
 begin
 
 -- adder with multiplexer for second operand (1, 2, K)
-s_adderOutput <= unsigned(s_adderInput1 + s_PC);
+s_adderOutput <= s_adderInput1 + s_PC;
 s_adderInput1 <= 
-	"0000000000000001" when i_mode12K = "00" else 
-	"0000000000000010" when i_mode12K = "01" else 
-	signed(i_K);
+	"0000000000000001" when i_mode12K = "00" else  
+	i_K;
 
 -- input multiplexer for PC
 s_pcInput <=
@@ -64,9 +63,7 @@ s_pcInput <=
 	s_adderOutput;
 
 -- multiplexer for the PM address
-s_addr <=
-	s_PC when i_modePCZ = '0' else
-	i_Z;
+s_addr <= s_PC;
 
 -- memory interface
 o_PMADDR <= s_addr;

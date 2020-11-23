@@ -115,9 +115,9 @@ begin
 					s_sub <= '1';
 					s_logic <= '0';
 					if i_operation = "0100" then
-						s_mov_cpse <= '1';
-					else
 						s_mov_cpse <= '0';
+					else
+						s_mov_cpse <= '1';
 					end if;
 					
 					if i_operation(2) = '0' and i_carry = '1' then
@@ -159,7 +159,7 @@ begin
 				when others =>
 					s_sub <= '0';
 					s_logic <= '0';
-					s_mov_cpse <= '1';
+					s_mov_cpse <= '0';
 					
 					s_result <= (others => '0');
 			end case;
