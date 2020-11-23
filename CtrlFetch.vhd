@@ -1,6 +1,9 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+use ieee.std_logic_unsigned.all;
+
+use ieee.std_logic_signed.all;
+
 
 -- Spartan 3
 --   Speed grade 4: 164 MHz
@@ -40,7 +43,7 @@ signal s_PC: unsigned(15 downto 0);
 signal s_IR: unsigned(15 downto 0);
 
 -- asynchronous internal signals
-signal s_adderInput1: unsigned(15 downto 0);
+signal s_adderInput1: signed(15 downto 0);
 signal s_adderOutput: unsigned(15 downto 0);
 signal s_pcInput: unsigned(15 downto 0);
 signal s_addr: unsigned(15 downto 0);
@@ -48,11 +51,11 @@ signal s_addr: unsigned(15 downto 0);
 begin
 
 -- adder with multiplexer for second operand (1, 2, K)
-s_adderOutput <= s_adderInput1 + s_PC;
+s_adderOutput <= unsigned(s_adderInput1 + s_PC);
 s_adderInput1 <= 
 	"0000000000000001" when i_mode12K = "00" else 
 	"0000000000000010" when i_mode12K = "01" else 
-	i_K;
+	signed(i_K);
 
 -- input multiplexer for PC
 s_pcInput <=

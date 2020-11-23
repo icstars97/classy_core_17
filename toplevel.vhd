@@ -54,7 +54,7 @@ port (
 	i_reset:			in std_logic;
 	-- FSM inputs
 	i_IR:				in unsigned(15 downto 0);
-	i_ALU_Z:			in std_logic;
+
 	-- control path outputs
 	o_reset:			out std_logic;
 	o_mode12K:		out std_logic_vector(1 downto 0);
@@ -69,7 +69,7 @@ port (
 	--stack handling
 	o_write_stack:	out std_logic;
 	o_read_stack:	out std_logic;	
-	o_push: 			out std_logic;
+	o_SP: 			out unsigned(15 downto 0);
 	o_pop:				out std_logic
 );
 end component;
@@ -121,8 +121,7 @@ end component;
 component Stack is
 port (
 	i_clk:			in std_logic;
-
-	i_read: 			in std_logic;
+	i_addr:			in unsigned(15 downto 0);
 	i_data: 			in unsigned(7 downto 0);
 	
 	o_data: 			out unsigned(7 downto 0);
@@ -138,6 +137,7 @@ signal s_st_write: std_logic;
 signal s_st_read: std_logic;
 signal s_pop: std_logic;
 signal s_push: std_logic;
+signal s_sp : unsigned(15 downto 0);
 
 -- connections between PM and CtrlFetch
 signal s_pm_addr: unsigned(15 downto 0);
@@ -211,7 +211,7 @@ port map (
 	i_reset => i_reset_ext, 
 	-- FSM inputs
 	i_IR => s_IR, 
-	i_ALU_Z => i_ALU_Z, 
+	
 	-- control path outputs
 	o_reset => s_reset, 
 	o_mode12K => s_mode12K, 
@@ -225,7 +225,7 @@ port map (
 	--stack handling
 	o_write_stack => s_st_write,
 	o_read_stack => s_st_read,
-	o_push => s_push,		
+	O_SP => s_sp,
 	o_pop => s_pop
 );
 
@@ -251,7 +251,7 @@ port map (
 Stack_0: component Stack
 port map ( 
 	i_clk => i_clk, 
-	i_read => s_st_read,
+	i_addr => s_sp,
 	i_data => s_st_data_in,
 	o_data => s_st_data_out,
 	i_write => s_st_write

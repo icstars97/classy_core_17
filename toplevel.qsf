@@ -38,7 +38,7 @@
 
 set_global_assignment -name FAMILY "Cyclone IV E"
 set_global_assignment -name DEVICE EP4CE115F23C7
-set_global_assignment -name TOP_LEVEL_ENTITY ControlUnit
+set_global_assignment -name TOP_LEVEL_ENTITY toplevel
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "17:23:26  OCTOBER 06, 2020"
 set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
@@ -53,8 +53,6 @@ set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "VERILOG HDL" -section_id eda
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name VHDL_FILE register_test.vhd
-set_global_assignment -name VHDL_FILE top_tb.vhd
-set_global_assignment -name VHDL_FILE top.vhd
 set_global_assignment -name VHDL_FILE RegisterFile.vhd
 set_global_assignment -name VHDL_FILE ProgramMemory.vhd
 set_global_assignment -name VHDL_FILE CtrlFetch.vhd
@@ -62,20 +60,30 @@ set_global_assignment -name VHDL_FILE ControlUnit.vhd
 set_global_assignment -name VHDL_FILE alu_tb.vhd
 set_global_assignment -name VHDL_FILE Alu.vhd
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH control_test -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH toplevel_test -section_id eda_simulation
 set_global_assignment -name EDA_TEST_BENCH_NAME register_test -section_id eda_simulation
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id register_test
 set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "200 ns" -section_id register_test
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME register_test -section_id register_test
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_global_assignment -name VHDL_FILE control_test.vhd
-set_global_assignment -name EDA_TEST_BENCH_FILE register_test.vhd -section_id register_test
 set_global_assignment -name EDA_TEST_BENCH_NAME control_test -section_id eda_simulation
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id control_test
 set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "400 ns" -section_id control_test
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME control_test -section_id control_test
-set_global_assignment -name EDA_TEST_BENCH_FILE control_test.vhd -section_id control_test
 set_global_assignment -name VHDL_FILE Stack.vhd
+set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
+set_global_assignment -name SMART_RECOMPILE ON
+set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
+set_global_assignment -name VHDL_FILE toplevel.vhd
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name VHDL_FILE toplevel_test.vhd
+set_global_assignment -name EDA_TEST_BENCH_FILE register_test.vhd -section_id register_test
+set_global_assignment -name EDA_TEST_BENCH_FILE control_test.vhd -section_id control_test
+set_global_assignment -name EDA_TEST_BENCH_NAME toplevel_test -section_id eda_simulation
+set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id toplevel_test
+set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "900 ns" -section_id toplevel_test
+set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME toplevel_test -section_id toplevel_test
+set_global_assignment -name EDA_TEST_BENCH_FILE toplevel_test.vhd -section_id toplevel_test
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

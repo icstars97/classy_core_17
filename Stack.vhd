@@ -6,7 +6,7 @@ entity Stack is
 port (
 	i_clk:			in std_logic;
 	i_data: 			in unsigned(7 downto 0);
-	i_addr:			in unsigned(31 downto 0);
+	i_addr:			in unsigned(15	downto 0);
 	i_write:			in std_logic;
 	o_data: 			out unsigned(7 downto 0)
 );

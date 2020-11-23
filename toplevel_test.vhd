@@ -2,12 +2,12 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
  
-entity top_tb is
-end top_tb;
+entity toplevel_test is
+end toplevel_test;
  
-architecture behavior of top_tb is 
+architecture behavior of toplevel_test is 
  
-component top is
+component toplevel is
 port (
 	i_clk: 			in std_logic;
 	i_reset_ext: 	in std_logic;
@@ -35,12 +35,12 @@ signal s_ALU_result: unsigned(7 downto 0);
 signal s_ALU_sreg: std_logic_vector(5 downto 0);
 
 -- Clock period definitions
-constant i_clk_period : time := 10 ns;
+constant i_clk_period : time := 20 ns;
  
 begin
  
 -- Instantiate the Unit Under Test (UUT)
-uut: top PORT MAP (
+uut: toplevel PORT MAP (
 	i_clk => i_clk,
 	i_reset_ext => i_reset_ext,
 	i_A => i_A,
@@ -63,9 +63,10 @@ end process;
 stim_proc: process
 begin		
 	-- hold reset state for 100 ns.
+	i_reset_ext <= '1';
 	wait for 100 ns;	
-
-	wait for i_clk_period*10;
+	i_reset_ext <= '0';
+	--wait for i_clk_period*10;
 
 	-- insert stimulus here 
 

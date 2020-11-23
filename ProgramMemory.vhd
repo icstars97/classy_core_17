@@ -20,8 +20,6 @@ x"0000", -- unused
 x"9409", -- ijmp
 x"cfff", -- rjmp .-2
 x"cfff", -- rjmp .-2
-x"fe00", -- sbrs r0, 0
-x"c003", -- rjmp .+6
 x"0e2e", -- add r2,r30
 x"e0e3"  -- ldi r30,3
 );

@@ -23,6 +23,7 @@ port (
 	o_K:				out unsigned(15 downto 0);
 	-- работа со стеком
 	o_write_stack:	out std_logic;
+	o_SP: 			out unsigned(15 downto 0);
 	o_read_stack:	out std_logic;
 	o_pop : 			out std_logic
 	
@@ -50,6 +51,7 @@ type ControlUnitState is (
 );
 
 signal s_state: ControlUnitState;
+signal SP: integer range 0 to 31 := 31; -- stack pointer
 
 begin
 
@@ -107,6 +109,8 @@ o_read_stack <= '1' when s_state = CUS_EXEC_POP
 				
 o_pop <= '1' when s_state = CUS_EXEC_POP
 		else '0';
+
+o_SP <= to_unsigned(SP, o_SP'length);
 -- последовательностная логика
 
 process (i_clk)
@@ -180,9 +184,11 @@ begin
 					s_state <= CUS_FETCH_1;
 				
 				when CUS_EXEC_POP => 
+					SP <= SP + 1;
 					s_state <= CUS_FETCH_1;
 				
-				when CUS_EXEC_PUSH => 
+				when CUS_EXEC_PUSH =>
+					SP <= SP - 1;
 					s_state <= CUS_FETCH_1;
 				
 				when others =>
