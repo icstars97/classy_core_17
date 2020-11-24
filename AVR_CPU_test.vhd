@@ -38,23 +38,16 @@ uut: AVR_CPU PORT MAP (
 -- Clock process definitions
 i_clk_process: process
 begin
-	i_clk <= '0';
-	wait for i_clk_period/2;
-	i_clk <= '1';
+	i_clk <= not i_clk;
 	wait for i_clk_period/2;
 end process;
 
 -- Stimulus process
 stim_proc: process
 begin		
-	-- hold reset state for 100 ns.
 	i_reset_ext <= '1';
 	wait for 100 ns;	
 	i_reset_ext <= '0';
-	--wait for i_clk_period*10;
-
-	-- insert stimulus here 
-
 	wait;
 end process;
 
